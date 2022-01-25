@@ -3,7 +3,7 @@
 #include <cmath>
 #include <x86intrin.h>
 
-#include "rmi/util/fn.hpp"
+#include "../rmi/util/fn.hpp"
 
 namespace rmi {
 
