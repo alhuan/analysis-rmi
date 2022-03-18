@@ -204,6 +204,11 @@ class RmiGAbs : public Rmi<Key, Layer1, Layer2>
      * @return index size in bytes
      */
     std::size_t size_in_bytes() { return base_type::size_in_bytes() + sizeof(error_); }
+
+    /**
+     * Returns the maximum error of a layer-2 model
+     */
+    std::size_t max_error() { return error_; }
 };
 
 
@@ -276,6 +281,11 @@ class RmiGInd : public Rmi<Key, Layer1, Layer2>
      * @return index size in bytes
      */
     std::size_t size_in_bytes() { return base_type::size_in_bytes() + sizeof(error_lo_) + sizeof(error_hi_); }
+
+    /**
+     * Returns the maximum error of a layer-2 model
+     */
+    std::size_t max_error() { return std::max(error_lo_, error_hi_); }
 };
 
 
@@ -347,6 +357,11 @@ class RmiLAbs : public Rmi<Key, Layer1, Layer2>
      * @return index size in bytes
      */
     std::size_t size_in_bytes() { return base_type::size_in_bytes() + errors_.size() * sizeof(errors_.front()); }
+
+    /**
+     * Returns the maximum error of a layer-2 model
+     */
+    std::size_t max_error() { return errors_.back(); }
 };
 
 
@@ -376,6 +391,7 @@ class RmiLInd : public Rmi<Key, Layer1, Layer2>
     };
 
     std::vector<bounds> errors_; ///< The error bounds of the layer2 models.
+    std::size_t max_error_;
 
     public:
     /**
@@ -398,6 +414,7 @@ class RmiLInd : public Rmi<Key, Layer1, Layer2>
      */
     template<typename RandomIt>
     RmiLInd(RandomIt first, RandomIt last, const std::size_t layer2_size) : base_type(first, last, layer2_size) {
+        max_error_ = 0;
         // Compute local individual errror bounds.
         errors_ = std::vector<bounds>(layer2_size);
         for (std::size_t i = 0; i != base_type::n_keys_; ++i) {
@@ -407,9 +424,11 @@ class RmiLInd : public Rmi<Key, Layer1, Layer2>
             if (pred > i) { // overestimation
                 std::size_t &lo = errors_[segment_id].lo;
                 lo = std::max(lo, pred - i);
+                max_error_ = std::max(lo, max_error_);
             } else { // underestimation
                 std::size_t &hi = errors_[segment_id].hi;
                 hi = std::max(hi, i - pred);
+                max_error_ = std::max(hi, max_error_);
             }
         }
     }
@@ -433,6 +452,11 @@ class RmiLInd : public Rmi<Key, Layer1, Layer2>
      * @return index size in bytes
      */
     std::size_t size_in_bytes() { return base_type::size_in_bytes() + errors_.size() * sizeof(errors_.front()); }
+
+    /**
+     * Returns the maximum error of a layer-2 model
+     */
+    std::size_t max_error() { return max_error_; }
 };
 
 } // namespace rmi
