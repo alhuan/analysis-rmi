@@ -134,6 +134,11 @@ class Rmi
     std::size_t size_in_bytes() {
         return l1_.size_in_bytes() + layer2_size_ * l2_[0].size_in_bytes() + sizeof(n_keys_) + sizeof(layer2_size_);
     }
+
+    /**
+     * Returns the maximum error of a layer-2 model
+     */
+    std::size_t max_error() { return n_keys_; }
 };
 
 
