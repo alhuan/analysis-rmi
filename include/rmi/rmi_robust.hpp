@@ -141,7 +141,7 @@ class RmiRobust
   /**
    * Returns the maximum error of a layer-2 model
    */
-    std::size_t max_error() { return n_keys_; }
+    std::size_t mean_error() { return n_keys_; }
 
   /**
    * Returns a representation of the number of segments within each "bin" of the data
@@ -228,9 +228,9 @@ class RmiGAbsRobust : public RmiRobust<Key, Layer1, Layer2>
   std::size_t size_in_bytes() { return base_type::size_in_bytes() + sizeof(error_); }
 
   /**
-   * Returns the maximum error of a layer-2 model
+   * Returns the mean error of a layer-2 model
    */
-    std::size_t max_error() { return error_; }
+    std::size_t mean_error() { return error_; }
 };
 
 
@@ -305,7 +305,7 @@ class RmiGIndRobust : public RmiRobust<Key, Layer1, Layer2>
   std::size_t size_in_bytes() { return base_type::size_in_bytes() + sizeof(error_lo_) + sizeof(error_hi_); }
 
   /**
-   * Returns the maximum error of a layer-2 model
+   * Returns the mean (max segment) error of a layer-2 model
    */
     std::size_t max_error() { return std::max(error_lo_, error_hi_); }
 };
@@ -383,7 +383,10 @@ class RmiLAbsRobust : public RmiRobust<Key, Layer1, Layer2>
   /**
    * Returns the maximum error of a layer-2 model
    */
-    std::size_t max_error() { return errors_.back(); }
+    std::size_t max_error() {
+        auto const count = errors_.size();
+        return std::accumulate(errors_.begin(), errors_.end()) / count;
+    }
 };
 
 
@@ -413,7 +416,7 @@ class RmiLIndRobust : public RmiRobust<Key, Layer1, Layer2>
   };
 
   std::vector<bounds> errors_; ///< The error bounds of the layer2 models.
-  std::size_t max_error_;
+  std::vector<size_t> max_errors_;
 
  public:
   /**
@@ -436,9 +439,9 @@ class RmiLIndRobust : public RmiRobust<Key, Layer1, Layer2>
    */
   template<typename RandomIt>
   RmiLIndRobust(RandomIt first, RandomIt last, const std::size_t layer2_size, const float outliers) : base_type(first, last, layer2_size, outliers) {
-    max_error_ = 0;
     // Compute local individual errror bounds.
     errors_ = std::vector<bounds>(layer2_size);
+    max_errors_ = std::vector<size_t>(layer2_size);
     for (std::size_t i = 0; i != base_type::n_keys_; ++i) {
       key_type key = *(first + i);
       std::size_t segment_id = base_type::get_segment_id(key);
@@ -446,11 +449,11 @@ class RmiLIndRobust : public RmiRobust<Key, Layer1, Layer2>
       if (pred > i) { // overestimation
         std::size_t &lo = errors_[segment_id].lo;
         lo = std::max(lo, pred - i);
-        max_error_ = std::max(lo, max_error_);
+        max_errors_[segment_id] = std::max(max_errors_[segment_id], lo);
       } else { // underestimation
         std::size_t &hi = errors_[segment_id].hi;
         hi = std::max(hi, i - pred);
-        max_error_ = std::max(hi, max_error_);
+        max_errors_[segment_id] = std::max(max_errors_[segment_id], lo);
       }
     }
   }
@@ -478,7 +481,9 @@ class RmiLIndRobust : public RmiRobust<Key, Layer1, Layer2>
   /**
    * Returns the maximum error of a layer-2 model
    */
-    std::size_t max_error() { return max_error_; }
+    std::size_t max_error() {
+        return std::accumulate(max_errors_.begin(), max_errors_.end())/ max_errors_.size();
+    }
 };
 
 } // namespace rmi
