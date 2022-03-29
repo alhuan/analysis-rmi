@@ -386,7 +386,7 @@ class RmiLAbsRobust : public RmiRobust<Key, Layer1, Layer2>
    */
     float max_error() {
         auto const count = static_cast<float>(errors_.size());
-        return std::accumulate(errors_.begin(), errors_.end()) / count;
+        return std::accumulate(errors_.begin(), errors_.end(), 0) / count;
     }
 };
 
