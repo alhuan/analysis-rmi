@@ -454,7 +454,7 @@ class RmiLIndRobust : public RmiRobust<Key, Layer1, Layer2>
       } else { // underestimation
         std::size_t &hi = errors_[segment_id].hi;
         hi = std::max(hi, i - pred);
-        max_errors_[segment_id] = std::max(max_errors_[segment_id], lo);
+        max_errors_[segment_id] = std::max(max_errors_[segment_id], hi);
       }
     }
   }
@@ -483,7 +483,7 @@ class RmiLIndRobust : public RmiRobust<Key, Layer1, Layer2>
    * Returns the maximum error of a layer-2 model
    */
     std::size_t max_error() {
-        return std::accumulate(max_errors_.begin(), max_errors_.end())/ max_errors_.size();
+        return std::accumulate(max_errors_.begin(), max_errors_.end(), 0)/ max_errors_.size();
     }
 };
 
