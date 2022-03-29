@@ -383,8 +383,8 @@ class RmiLAbsRobust : public RmiRobust<Key, Layer1, Layer2>
   /**
    * Returns the maximum error of a layer-2 model
    */
-    std::size_t max_error() {
-        auto const count = errors_.size();
+    float max_error() {
+        auto const count = static_cast<float>(errors_.size());
         return std::accumulate(errors_.begin(), errors_.end()) / count;
     }
 };
