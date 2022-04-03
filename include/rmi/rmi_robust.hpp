@@ -308,7 +308,7 @@ class RmiGIndRobust : public RmiRobust<Key, Layer1, Layer2>
   /**
    * Returns the mean (max segment) error of a layer-2 model
    */
-    std::size_t max_error() { return std::max(error_lo_, error_hi_); }
+  float max_error() { return std::max(error_lo_, error_hi_); }
 };
 
 
@@ -325,6 +325,7 @@ class RmiLAbsRobust : public RmiRobust<Key, Layer1, Layer2>
 
  protected:
   std::vector<std::size_t> errors_; ///< The error bounds of the layer2 models.
+  float avg_error_;
 
  public:
   /**
@@ -349,14 +350,17 @@ class RmiLAbsRobust : public RmiRobust<Key, Layer1, Layer2>
   RmiLAbsRobust(RandomIt first, RandomIt last, const std::size_t layer2_size, const float outliers) : base_type(first, last, layer2_size, outliers) {
     // Compute local absolute error bounds.
     errors_ = std::vector<std::size_t>(layer2_size);
+    avg_error_ = 0;
     for (std::size_t i = 0; i != base_type::n_keys_; ++i) {
       key_type key = *(first + i);
       std::size_t segment_id = base_type::get_segment_id(key);
       std::size_t pred = std::clamp<double>(base_type::l2_[segment_id].predict(key), 0, base_type::n_keys_ - 1);
       if (pred > i) { // overestimation
         errors_[segment_id] = std::max(errors_[segment_id], pred - i);
+        avg_error_ = i * avg_error_ / (i + 1) + static_cast<float>(pred - i) / (i + 1);
       } else { // underestimation
         errors_[segment_id] = std::max(errors_[segment_id], i - pred);
+        avg_error_ = i * avg_error_ / (i + 1) + static_cast<float>(i - pred) / (i + 1);
       }
     }
   }
@@ -385,8 +389,7 @@ class RmiLAbsRobust : public RmiRobust<Key, Layer1, Layer2>
    * Returns the maximum error of a layer-2 model
    */
     float max_error() {
-        auto const count = static_cast<float>(errors_.size());
-        return std::accumulate(errors_.begin(), errors_.end(), 0) / count;
+        return avg_error_;
     }
 };
 
@@ -482,8 +485,8 @@ class RmiLIndRobust : public RmiRobust<Key, Layer1, Layer2>
   /**
    * Returns the maximum error of a layer-2 model
    */
-    std::size_t max_error() {
-        return std::accumulate(max_errors_.begin(), max_errors_.end(), 0)/ max_errors_.size();
+    float max_error() {
+        return std::accumulate(max_errors_.begin(), max_errors_.end(), 0)/ static_cast<float>(max_errors_.size());
     }
 };
 
