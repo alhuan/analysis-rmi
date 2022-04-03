@@ -39,6 +39,7 @@ class RmiRobust
   layer1_type l1_;          ///< The layer1 model.
   layer2_type *l2_;         ///< The array of layer2 models.
   float outliers_;          ///< The proportion of elements to disregard as outliers
+  float avg_error_;
 
  public:
   /**
@@ -64,6 +65,7 @@ class RmiRobust
       : n_keys_(std::distance(first, last))
       , layer2_size_(layer2_size)
       , outliers_(outliers)
+      , avg_error_(0)
   {
     std::size_t outlier_size = (std::size_t) (outliers_ * n_keys_);
     // Train layer1.
@@ -203,8 +205,10 @@ class RmiGAbsRobust : public RmiRobust<Key, Layer1, Layer2>
       std::size_t pred = std::clamp<double>(base_type::l2_[segment_id].predict(key), 0, base_type::n_keys_ - 1);
       if (pred > i) { // overestimation
         error_ = std::max(error_, pred - i);
+        base_type::avg_error_ =  i * base_type::avg_error_ / (i + 1) + static_cast<float>(pred - i) / (i + 1);
       } else { // underestimation
         error_ = std::max(error_, i - pred);
+        base_type::avg_error_ =  i * base_type::avg_error_ / (i + 1) + static_cast<float>(i - pred) / (i + 1);
       }
     }
   }
@@ -231,7 +235,7 @@ class RmiGAbsRobust : public RmiRobust<Key, Layer1, Layer2>
   /**
    * Returns the mean error of a layer-2 model
    */
-    std::size_t mean_error() { return error_; }
+  float max_error() { return base_type::avg_error_; }
 };
 
 
@@ -280,8 +284,10 @@ class RmiGIndRobust : public RmiRobust<Key, Layer1, Layer2>
       std::size_t pred = std::clamp<double>(base_type::l2_[segment_id].predict(key), 0, base_type::n_keys_ - 1);
       if (pred > i) { // overestimation
         error_lo_ = std::max(error_lo_, pred - i);
+        base_type::avg_error_ =  i * base_type::avg_error_ / (i + 1) + static_cast<float>(pred - i) / (i + 1);
       } else { // underestimation
         error_hi_ = std::max(error_hi_, i - pred);
+        base_type::avg_error_ =  i * base_type::avg_error_ / (i + 1) + static_cast<float>(i - pred) / (i + 1);
       }
     }
   }
@@ -308,7 +314,7 @@ class RmiGIndRobust : public RmiRobust<Key, Layer1, Layer2>
   /**
    * Returns the mean (max segment) error of a layer-2 model
    */
-  float max_error() { return std::max(error_lo_, error_hi_); }
+  float max_error() { return base_type::avg_error_; }
 };
 
 
@@ -325,7 +331,6 @@ class RmiLAbsRobust : public RmiRobust<Key, Layer1, Layer2>
 
  protected:
   std::vector<std::size_t> errors_; ///< The error bounds of the layer2 models.
-  float avg_error_;
 
  public:
   /**
@@ -357,10 +362,10 @@ class RmiLAbsRobust : public RmiRobust<Key, Layer1, Layer2>
       std::size_t pred = std::clamp<double>(base_type::l2_[segment_id].predict(key), 0, base_type::n_keys_ - 1);
       if (pred > i) { // overestimation
         errors_[segment_id] = std::max(errors_[segment_id], pred - i);
-        avg_error_ = i * avg_error_ / (i + 1) + static_cast<float>(pred - i) / (i + 1);
+        base_type::avg_error_ = i * base_type::avg_error_ / (i + 1) + static_cast<float>(pred - i) / (i + 1);
       } else { // underestimation
         errors_[segment_id] = std::max(errors_[segment_id], i - pred);
-        avg_error_ = i * avg_error_ / (i + 1) + static_cast<float>(i - pred) / (i + 1);
+        base_type::avg_error_ = i * base_type::avg_error_ / (i + 1) + static_cast<float>(i - pred) / (i + 1);
       }
     }
   }
@@ -389,7 +394,7 @@ class RmiLAbsRobust : public RmiRobust<Key, Layer1, Layer2>
    * Returns the maximum error of a layer-2 model
    */
     float max_error() {
-        return avg_error_;
+        return base_type::avg_error_;
     }
 };
 
@@ -420,7 +425,6 @@ class RmiLIndRobust : public RmiRobust<Key, Layer1, Layer2>
   };
 
   std::vector<bounds> errors_; ///< The error bounds of the layer2 models.
-  std::vector<size_t> max_errors_;
 
  public:
   /**
@@ -445,7 +449,6 @@ class RmiLIndRobust : public RmiRobust<Key, Layer1, Layer2>
   RmiLIndRobust(RandomIt first, RandomIt last, const std::size_t layer2_size, const float outliers) : base_type(first, last, layer2_size, outliers) {
     // Compute local individual errror bounds.
     errors_ = std::vector<bounds>(layer2_size);
-    max_errors_ = std::vector<size_t>(layer2_size);
     for (std::size_t i = 0; i != base_type::n_keys_; ++i) {
       key_type key = *(first + i);
       std::size_t segment_id = base_type::get_segment_id(key);
@@ -453,11 +456,11 @@ class RmiLIndRobust : public RmiRobust<Key, Layer1, Layer2>
       if (pred > i) { // overestimation
         std::size_t &lo = errors_[segment_id].lo;
         lo = std::max(lo, pred - i);
-        max_errors_[segment_id] = std::max(max_errors_[segment_id], lo);
+        base_type::avg_error_ =  i * base_type::avg_error_ / (i + 1) + static_cast<float>(pred - i) / (i + 1);
       } else { // underestimation
         std::size_t &hi = errors_[segment_id].hi;
         hi = std::max(hi, i - pred);
-        max_errors_[segment_id] = std::max(max_errors_[segment_id], hi);
+        base_type::avg_error_ =  i * base_type::avg_error_ / (i + 1) + static_cast<float>(i - pred) / (i + 1);
       }
     }
   }
@@ -486,7 +489,7 @@ class RmiLIndRobust : public RmiRobust<Key, Layer1, Layer2>
    * Returns the maximum error of a layer-2 model
    */
     float max_error() {
-        return std::accumulate(max_errors_.begin(), max_errors_.end(), 0)/ static_cast<float>(max_errors_.size());
+        return base_type::avg_error_;
     }
 };
 
