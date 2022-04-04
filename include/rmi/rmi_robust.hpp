@@ -142,11 +142,6 @@ class RmiRobust
   }
 
   /**
-   * Returns the maximum error of a layer-2 model
-   */
-    std::size_t mean_error() { return n_keys_; }
-
-  /**
    * Returns a representation of the number of segments within each "bin" of the data
    * @return vector with number of segments in each bin
    */
@@ -158,6 +153,10 @@ class RmiRobust
         bin_segments.push_back(get_segment_id(keys[bin_size * i] - 1) - bin_segments[bin_segments.size() - 1]);
      }
      return bin_segments;
+   }
+
+   float mean_error() {
+       return avg_error_;
    }
 };
 
@@ -231,11 +230,6 @@ class RmiGAbsRobust : public RmiRobust<Key, Layer1, Layer2>
    * @return index size in bytes
    */
   std::size_t size_in_bytes() { return base_type::size_in_bytes() + sizeof(error_); }
-
-  /**
-   * Returns the mean error of a layer-2 model
-   */
-  float max_error() { return base_type::avg_error_; }
 };
 
 
@@ -310,11 +304,6 @@ class RmiGIndRobust : public RmiRobust<Key, Layer1, Layer2>
    * @return index size in bytes
    */
   std::size_t size_in_bytes() { return base_type::size_in_bytes() + sizeof(error_lo_) + sizeof(error_hi_); }
-
-  /**
-   * Returns the mean (max segment) error of a layer-2 model
-   */
-  float max_error() { return base_type::avg_error_; }
 };
 
 
@@ -389,13 +378,6 @@ class RmiLAbsRobust : public RmiRobust<Key, Layer1, Layer2>
    * @return index size in bytes
    */
   std::size_t size_in_bytes() { return base_type::size_in_bytes() + errors_.size() * sizeof(errors_.front()); }
-
-  /**
-   * Returns the maximum error of a layer-2 model
-   */
-    float max_error() {
-        return base_type::avg_error_;
-    }
 };
 
 
@@ -484,13 +466,6 @@ class RmiLIndRobust : public RmiRobust<Key, Layer1, Layer2>
    * @return index size in bytes
    */
   std::size_t size_in_bytes() { return base_type::size_in_bytes() + errors_.size() * sizeof(errors_.front()); }
-
-  /**
-   * Returns the maximum error of a layer-2 model
-   */
-    float max_error() {
-        return base_type::avg_error_;
-    }
 };
 
 } // namespace rmi
