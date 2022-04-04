@@ -344,7 +344,6 @@ class RmiLAbsRobust : public RmiRobust<Key, Layer1, Layer2>
   RmiLAbsRobust(RandomIt first, RandomIt last, const std::size_t layer2_size, const float outliers) : base_type(first, last, layer2_size, outliers) {
     // Compute local absolute error bounds.
     errors_ = std::vector<std::size_t>(layer2_size);
-    avg_error_ = 0;
     for (std::size_t i = 0; i != base_type::n_keys_; ++i) {
       key_type key = *(first + i);
       std::size_t segment_id = base_type::get_segment_id(key);
