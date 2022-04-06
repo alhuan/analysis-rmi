@@ -69,7 +69,7 @@ class RmiRobust
   {
     std::size_t outlier_size = (std::size_t) (outliers_ * n_keys_);
     // Train layer1.
-    l1_ = layer1_type(first + outlier_size, last - outlier_size, 0, static_cast<double>(layer2_size) / n_keys_); // train with compression
+    l1_ = layer1_type(first + outlier_size, last - outlier_size, outlier_size, static_cast<double>(layer2_size) / n_keys_); // train with compression
 
     // Train layer2.
     l2_ = new layer2_type[layer2_size];
