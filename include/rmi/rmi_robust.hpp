@@ -158,6 +158,18 @@ class RmiRobust
    float mean_error() {
        return avg_error_;
    }
+
+   std::vector<std::size_t> keys_per_segment(const std::vector<key_type>&keys) {
+       std::vector<std::size_t> segments;
+       for (std::size_t i = 0; i < n_keys_; i++) {
+           auto pred_segment = get_segment_id(keys[i]);
+           while (segments.size() < pred_segment + 1) {
+               segments.push_back(0);
+           }
+           ++segments[pred_segment];
+       }
+       return segments;
+   }
 };
 
 
